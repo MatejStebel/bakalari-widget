@@ -48,8 +48,8 @@ Development has primarily been tested on:
 ## First install
 - For the first install you can just use
 ```bash
-git clone https://github.com/MatejStebel/plasma-widgets.git
-cd plasma-widgets/bakalari-widget
+git clone https://github.com/MatejStebel/bakalari-widget.git
+cd bakalari-widget
 ./install.sh
 ```
 
@@ -365,7 +365,7 @@ v0.1.0
 
 ## Repository
 
-https://github.com/MatejStebel/plasma-widgets
+https://github.com/MatejStebel/bakalari-widget
 
 ## License
 
