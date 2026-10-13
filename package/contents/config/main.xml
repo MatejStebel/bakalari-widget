@@ -24,6 +24,9 @@
         >
             <default></default>
         </entry>
+        <entry name="displayName" type="String">
+            <default></default>
+        </entry>
         <entry
             name="logoutRequested"
             type="Bool"

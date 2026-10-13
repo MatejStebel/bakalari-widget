@@ -8,6 +8,7 @@ Kirigami.FormLayout {
 
     property alias cfg_serverUrl: serverUrl.text
     property alias cfg_username: username.text
+    property alias cfg_displayName: displayName.text
     property alias cfg_refreshInterval: refreshInterval.value
 
     QQC2.TextField {
@@ -26,7 +27,19 @@ Kirigami.FormLayout {
         id: username
 
         Kirigami.FormData.label:
-            i18n("Username:")
+            i18n("Login-username:")
+
+        Layout.fillWidth: true
+    }
+
+    QQC2.TextField {
+        id: displayName
+
+        Kirigami.FormData.label:
+            i18n("Display name:")
+
+        placeholderText:
+            i18n("Name shown above the timetable")
 
         Layout.fillWidth: true
     }

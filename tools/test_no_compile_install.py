@@ -26,6 +26,11 @@ class NoCompileInstall(unittest.TestCase):
         module.write_text("module org.kde.plasma.workspace.dbus\n")
         self.target = self.base / "installed"
         self.env = {**os.environ, "PATH": str(self.bin), "QML_IMPORT_PATH": str(self.module_root)}
+        self.restart_log = self.base / "restart.log"
+        self.env["RESTART_LOG"] = str(self.restart_log)
+        systemctl = self.bin / "systemctl"
+        systemctl.write_text('#!/bin/sh\nprintf "%s\\n" "$*" >> "$RESTART_LOG"\nexit "${RESTART_EXIT_CODE:-0}"\n')
+        systemctl.chmod(0o755)
 
     def install(self, version, script="install.sh"):
         shell = self.bin / "plasmashell"
@@ -52,6 +57,15 @@ class NoCompileInstall(unittest.TestCase):
         self.assertFalse((self.target / "contents/ui/WalletLegacy.qml").exists())
         self.assertEqual(unrelated.read_text(), "keep me")
         self.assertFalse((self.target / "contents/data").exists())
+        self.assertEqual(self.restart_log.read_text().splitlines(),
+                         ["--user restart plasma-plasmashell.service"] * 2)
+
+    def test_restart_failure_reports_installed_widget(self):
+        self.env["RESTART_EXIT_CODE"] = "1"
+        result = self.install("6.3.6")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("widget was installed, but Plasma could not be restarted", result.stderr)
+        self.assertTrue((self.target / "contents/ui/WalletDbus.qml").is_file())
 
     def test_old_installer_name_remains_an_alias(self):
         result = self.install("6.3.6", "install-no-compile.sh")
@@ -61,6 +75,7 @@ class NoCompileInstall(unittest.TestCase):
         result = self.install("5.27.12")
         self.assertNotEqual(result.returncode, 0)
         self.assertFalse(self.target.exists())
+        self.assertFalse(self.restart_log.exists())
 
     def test_older_plasma6_rejected_before_install(self):
         result = self.install("6.2.5")

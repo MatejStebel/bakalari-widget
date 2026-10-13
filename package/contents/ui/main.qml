@@ -688,10 +688,9 @@ PlasmoidItem {
                         Layout.preferredHeight: 40
 
                         text:
-                            plasmoid.configuration.username !== ""
-                            ? "Weekly schedule — "
-                                + plasmoid.configuration.username
-                            : "Weekly schedule — not configured"
+                            (plasmoid.configuration.displayName || "").trim() !== ""
+                            ? i18n("Weekly schedule — %1", plasmoid.configuration.displayName.trim())
+                            : i18n("Weekly schedule")
 
                         horizontalAlignment:
                             Text.AlignHCenter

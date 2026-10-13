@@ -65,4 +65,9 @@ fi
 rm -f -- "$destination/contents/ui/WalletLegacy.qml"
 
 echo "Installed without compilation: $destination"
-echo "Reload Plasma or log out and back in to load the updated widget."
+echo "Restarting Plasma..."
+if ! systemctl --user restart plasma-plasmashell.service; then
+    echo "The widget was installed, but Plasma could not be restarted. Log out and back in to load it." >&2
+    exit 1
+fi
+echo "Installation complete."

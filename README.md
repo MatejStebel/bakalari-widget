@@ -46,12 +46,13 @@ the application `cz.saruman.bakalari`.
 bash install.sh
 ```
 
-Run the same command for updates, then reload Plasma or log out and back in.
+Run the same command for updates. Plasma Shell restarts automatically after installation.
 This path targets Plasma 6.3 or newer with Plasma's D-Bus QML module and KWallet.
 It needs no CMake, compiler, development packages, Python, or `secret-tool`.
 `qtpaths6` is optional: the installer also searches standard Qt 6 QML locations,
 including Debian multiarch directories, and `QML_IMPORT_PATH`. It checks the
-Plasma version and module before copying files and does not restart your desktop.
+Plasma version and module before copying files, then restarts Plasma Shell with
+`systemctl --user restart plasma-plasmashell.service`.
 Updates remove obsolete compiled plugin files while retaining KWallet passwords
 and widget settings. `install-no-compile.sh` remains an alias for `install.sh`.
 
@@ -123,7 +124,7 @@ cd bakalari-widget
 ./install.sh
 ```
 
-After installation, reload Plasma or log out and back in. The widget should then
+After installation, Plasma Shell restarts automatically. The widget should then
 appear in Plasma's **Add Widgets** dialog.
 
 ## Updating
@@ -133,8 +134,9 @@ git pull
 bash update.sh
 ```
 
-The update script uses the same no-compile installer. Reload Plasma afterward;
-neither script automatically restarts your desktop.
+The update script uses the same no-compile installer and restarts Plasma Shell
+once after a successful update. If the restart fails, the script reports that
+installation succeeded and asks you to log out and back in.
 
 ## Configuration
 
@@ -145,7 +147,8 @@ Right-click the widget and open its settings.
 Configure:
 
 - **Bakaláři server URL**
-- **Username**
+- **Login-username** — the username used to sign in to Bakaláři
+- **Display name** — the name shown in the widget header; leave blank for “Weekly schedule”
 - **Refresh interval**
 
 Example server URL:
@@ -318,7 +321,7 @@ After editing QML, JavaScript, or C++ code:
 ./update.sh
 ```
 
-The development script rebuilds the KWallet plugin, installs the widget into the user's Plasma directory, and restarts Plasma Shell.
+The update script installs the widget into the user's Plasma directory without compilation and restarts Plasma Shell.
 
 Useful Plasma logs can be viewed with:
 
