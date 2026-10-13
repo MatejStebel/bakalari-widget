@@ -4,7 +4,6 @@ import QtQuick.Layouts
 import org.kde.plasma.plasmoid
 import org.kde.plasma.components as PlasmaComponents
 import "../code/timetableParser.js" as TimetableParser
-import "BakalariWallet" as BakalariWallet
 
 
 PlasmoidItem {
@@ -22,6 +21,8 @@ PlasmoidItem {
     property string accessToken: ""
     property string apiStatus: ""
     property bool apiBusy: false
+    property string credentialStatus: ""
+    property int sessionGeneration: 0
     property var lastApiData: null
     property string teacherOverridesJson:
         plasmoid.configuration.teacherOverrides || "{}"
@@ -46,13 +47,15 @@ PlasmoidItem {
             )
         }
     }
-    BakalariWallet.WalletBackend {
-        id: walletBackend
-    }
-    Component.onCompleted: {
-        Qt.callLater(function() {
-            root.tryAutomaticLogin()
-        })
+    Loader {
+        id: walletLoader
+        source: "WalletDbus.qml"
+        onLoaded: Qt.callLater(function() { root.tryAutomaticLogin() })
+        onStatusChanged: {
+            if (status === Loader.Error) {
+                root.credentialStatus = i18n("Password storage is unavailable. You can still log in for this session.")
+            }
+        }
     }
     function normalizedServerUrl() {
         var url = plasmoid.configuration.serverUrl.trim()
@@ -81,45 +84,39 @@ PlasmoidItem {
     }
 
 
-    function savePasswordToWallet(password) {
-        var key = root.walletKey()
-
-        if (
-            key === ""
-            || password === ""
-        ) {
+    function savePasswordToWallet(key, password, generation) {
+        if (key === "" || password === "") {
             return
         }
-
-        var success =
-            walletBackend.savePassword(
-                key,
-                password
-            )
-
-        if (!success) {
-            console.error(
-                "Could not save password to KWallet"
-            )
+        if (!walletLoader.item) {
+            root.credentialStatus = i18n("Logged in, but the password could not be saved.")
+            return
         }
+        walletLoader.item.savePassword(key, password, function(error) {
+            if (generation !== root.sessionGeneration) { return }
+            root.credentialStatus = error
+                ? i18n("Logged in, but the password could not be saved to KWallet.") : ""
+        })
     }
     function forgetPasswordAndLogout() {
-        var key =
-            root.walletKey()
-
+        var key = root.walletKey()
+        root.clearLoginSession()
+        var generation = root.sessionGeneration
         if (key !== "") {
-            var removed =
-                walletBackend.deletePassword(
-                    key
-                )
-
-            if (!removed) {
-                console.error(
-                    "Could not remove password from KWallet"
-                )
+            if (!walletLoader.item) {
+                root.credentialStatus = i18n("Logged out, but the saved password could not be removed.")
+                return
             }
+            walletLoader.item.deletePassword(key, function(error) {
+                if (generation !== root.sessionGeneration) { return }
+                root.credentialStatus = error
+                    ? i18n("Logged out, but the saved password could not be removed from KWallet.") : ""
+            })
         }
+    }
 
+    function clearLoginSession() {
+        ++root.sessionGeneration
         refreshTimer.stop()
 
         root.accessToken = ""
@@ -132,30 +129,32 @@ PlasmoidItem {
 
         root.apiBusy = false
         root.apiStatus = "Logged out"
+        root.credentialStatus = ""
     }
 
     function tryAutomaticLogin() {
         var key = root.walletKey()
 
-        if (key === "") {
+        if (key === "" || !walletLoader.item || root.accessToken !== ""
+                || root.apiBusy || root.sessionPassword !== "") {
             return
         }
-
-        var password =
-            walletBackend.loadPassword(key)
-
-        if (
-            password === undefined
-            || password === null
-            || password === ""
-        ) {
-            return
-        }
-
-        root.sessionPassword =
-            password
-
-        root.loginToBakalari()
+        var generation = root.sessionGeneration
+        walletLoader.item.loadPassword(key, function(error, password) {
+            if (generation !== root.sessionGeneration || key !== root.walletKey()
+                    || root.apiBusy || root.sessionPassword !== "" || root.accessToken !== "") {
+                return
+            }
+            if (error) {
+                root.credentialStatus = i18n("Could not read KWallet. Enter your password to log in.")
+                return
+            }
+            root.credentialStatus = ""
+            if (password) {
+                root.sessionPassword = password
+                root.loginToBakalari()
+            }
+        })
     }
     function loadTeacherOverrides() {
         try {
@@ -209,6 +208,8 @@ PlasmoidItem {
         function onRefreshIntervalChanged() {
             refreshTimer.restart()
         }
+        function onServerUrlChanged() { root.clearLoginSession() }
+        function onUsernameChanged() { root.clearLoginSession() }
     }
 
 
@@ -340,6 +341,7 @@ PlasmoidItem {
     }
     
     function loginToBakalari() {
+        if (root.apiBusy) { return }
         var server = normalizedServerUrl()
         var username = plasmoid.configuration.username.trim()
 
@@ -360,6 +362,9 @@ PlasmoidItem {
 
         apiBusy = true
         apiStatus = "Logging in..."
+        var generation = ++root.sessionGeneration
+        var key = root.walletKey()
+        var password = root.sessionPassword
 
         var request = new XMLHttpRequest()
 
@@ -381,18 +386,19 @@ PlasmoidItem {
                 return
             }
 
+            if (generation !== root.sessionGeneration || key !== root.walletKey()) {
+                password = ""
+                return
+            }
+
             root.apiBusy = false
 
             if (request.status !== 200) {
+                password = ""
                 root.apiStatus =
                     "Login failed (HTTP "
                     + request.status
                     + ")"
-
-                console.error(
-                    "Bakaláři login failed:",
-                    request.responseText
-                )
 
                 return
             }
@@ -404,6 +410,7 @@ PlasmoidItem {
                     request.responseText
                 )
             } catch (error) {
+                password = ""
                 root.apiStatus =
                     "Invalid login response"
 
@@ -419,6 +426,7 @@ PlasmoidItem {
                 !response.access_token
                 || response.access_token === ""
             ) {
+                password = ""
                 root.apiStatus =
                     "Login response has no access token"
 
@@ -433,8 +441,9 @@ PlasmoidItem {
 
             // Save it BEFORE clearing sessionPassword.
             root.savePasswordToWallet(
-                root.sessionPassword
+                key, password, generation
             )
+            password = ""
 
             refreshTimer.restart()
 
@@ -448,7 +457,7 @@ PlasmoidItem {
             + "&username="
             + encodeURIComponent(username)
             + "&password="
-            + encodeURIComponent(sessionPassword)
+            + encodeURIComponent(password)
 
         request.send(body)
     }
@@ -480,6 +489,8 @@ PlasmoidItem {
         root.apiStatus = "Loading timetable..."
 
         var request = new XMLHttpRequest()
+        var generation = root.sessionGeneration
+        var key = root.walletKey()
 
         var url =
             root.normalizedServerUrl()
@@ -504,6 +515,10 @@ PlasmoidItem {
                 return
             }
 
+            if (generation !== root.sessionGeneration || key !== root.walletKey()) {
+                return
+            }
+
             root.apiBusy = false
 
             if (request.status !== 200) {
@@ -511,11 +526,6 @@ PlasmoidItem {
                     "Timetable failed (HTTP "
                     + request.status
                     + ")"
-
-                console.error(
-                    "Timetable request failed:",
-                    request.responseText
-                )
 
                 return
             }
@@ -762,6 +772,15 @@ PlasmoidItem {
                                 root.fetchTimetable()
                         }
                     }
+                    PlasmaComponents.Label {
+                        Layout.fillWidth: true
+
+                        visible: root.credentialStatus !== ""
+                        text: root.credentialStatus
+                        wrapMode: Text.WordWrap
+                        horizontalAlignment: Text.AlignHCenter
+                    }
+
                     PlasmaComponents.Label {
                         Layout.fillWidth: true
 

@@ -28,14 +28,84 @@ The widget connects to the Bakaláři API, downloads the current timetable, and 
 
 ## Requirements
 
-- KDE Plasma 6
+- KDE Plasma 6.3 or newer for the no-compile backend
 - Qt 6
 - KDE Frameworks 6
 - KWallet
-- C++ compiler
-- CMake
+- Bash and tar for installation
 
-The widget contains a small compiled QML plugin used for secure KWallet access, so it must currently be built before installation.
+The default password backend now calls KWallet asynchronously through Plasma's
+`org.kde.plasma.workspace.dbus` QML module. It sends no password through process
+arguments, shell commands, or temporary files. Existing KWallet entries use the
+same folder and account keys; no migration is needed. KWallet may ask to authorize
+the application `cz.saruman.bakalari`.
+
+### Installation (no compilation)
+
+```bash
+bash install.sh
+```
+
+Run the same command for updates, then reload Plasma or log out and back in.
+This path targets Plasma 6.3 or newer with Plasma's D-Bus QML module and KWallet.
+It needs no CMake, compiler, development packages, Python, or `secret-tool`.
+`qtpaths6` is optional: the installer also searches standard Qt 6 QML locations,
+including Debian multiarch directories, and `QML_IMPORT_PATH`. It checks the
+Plasma version and module before copying files and does not restart your desktop.
+Updates remove obsolete compiled plugin files while retaining KWallet passwords
+and widget settings. `install-no-compile.sh` remains an alias for `install.sh`.
+
+Debian 13 (Trixie) with its KDE desktop is supported by using the single-argument
+D-Bus API and `finished` signal from Plasma 6.3, instead of the callback overload
+introduced in Plasma 6.4. The module is supplied by Debian's
+[`plasma-workspace` runtime package](https://packages.debian.org/trixie/amd64/plasma-workspace/filelist).
+Run the installation command above as your normal desktop user, without `sudo`.
+Debian 12's stock Plasma 5 is not supported; this remains a Plasma 6 widget.
+
+Wallet failures are displayed separately from API status. Manual login can still
+work without password storage; a failed deletion explicitly warns that the saved
+password remains. The timetable parser, teacher overrides, and date/hour
+highlighting are unchanged.
+
+### Credential backend checks
+
+Development tests use Python with PySide6 (not a widget runtime dependency):
+
+```bash
+python3 tools/test_wallet_qml.py
+python3 tools/test_wallet_qml.py --live
+python3 tools/test_login_lifecycle.py
+python3 tools/test_no_compile_install.py
+```
+
+The live check creates a unique `prototype-test-…` entry, round-trips a dummy
+password containing whitespace, Unicode and shell characters, and deletes it.
+It also checks that queued deletion runs after an in-flight save. The lifecycle
+tests exercise login, logout and account changes with deferred simulated replies.
+These checks never read account passwords. A failed run prints its disposable key;
+`--live --cleanup-abandoned` removes only UUID-shaped test entries before retesting.
+KWallet may request unlock/authorization. Live API login and interactive wallet
+cancellation still need desktop validation before considering this path stable.
+
+To test the actual Debian 13 Plasma 6.3.6 D-Bus plugin with Debian's Qt libraries
+and an isolated in-memory wallet service (no access to your real wallet):
+
+```bash
+podman run --rm --security-opt label=disable \
+    --mount "type=bind,source=$PWD,target=/work,ro" \
+    docker.io/library/debian:13-slim \
+    bash /work/tools/test_debian_compat.sh --inside-container
+```
+
+This optional developer test downloads prebuilt runtime packages inside the
+disposable container. The current test image/package command targets amd64.
+The test verifies that the requested Debian plugin actually loaded, so a host
+plugin cannot accidentally produce a passing compatibility result.
+
+Validation: the Debian 13 container passed with the actual Plasma 6.3.6 plugin
+and Qt 6.8.2, using the in-memory wallet fixture. Real KWallet round trips were
+also tested on the Fedora host. A full Debian desktop/API login and interactive
+wallet unlock/cancellation have not been tested.
 
 ## Tested environment
 
@@ -53,86 +123,18 @@ cd bakalari-widget
 ./install.sh
 ```
 
-## Building on Fedora Linux
-
-Install the required development packages:
-
-```bash
-sudo dnf install \
-    cmake \
-    gcc-c++ \
-    kf6-kwallet-devel \
-    qt6-qtdeclarative-devel
-```
-
-Clone the repository:
-
-```bash
-git clone https://github.com/MatejStebel/plasma-widgets.git
-cd plasma-widgets/bakalari-widget
-```
-
-Configure the project:
-
-```bash
-cmake \
-    -S . \
-    -B build \
-    -DCMAKE_BUILD_TYPE=Release
-```
-
-Build:
-
-```bash
-cmake --build build
-```
-
-Install into the current user's Plasma installation:
-
-```bash
-cmake --install build \
-    --prefix "$HOME/.local"
-```
-
-Restart Plasma:
-
-```bash
-systemctl --user restart plasma-plasmashell.service
-```
-
-The widget should then appear in Plasma's **Add Widgets** dialog.
+After installation, reload Plasma or log out and back in. The widget should then
+appear in Plasma's **Add Widgets** dialog.
 
 ## Updating
 
-Pull the newest source:
-
 ```bash
 git pull
+bash update.sh
 ```
 
-Then rebuild and reinstall:
-
-```bash
-cmake \
-    -S . \
-    -B build \
-    -DCMAKE_BUILD_TYPE=Release
-
-cmake --build build
-
-cmake --install build \
-    --prefix "$HOME/.local"
-
-systemctl --user restart plasma-plasmashell.service
-```
-
-For development, the repository also contains:
-
-```bash
-./update.sh
-```
-
-which performs the build, installation, and Plasma restart automatically.
+The update script uses the same no-compile installer. Reload Plasma afterward;
+neither script automatically restarts your desktop.
 
 ## Configuration
 
@@ -268,7 +270,8 @@ Each instance has its own configuration, which makes it possible to use differen
 
 ```text
 bakalari-widget/
-├── CMakeLists.txt
+├── install.sh
+├── install-no-compile.sh
 ├── package/
 │   ├── metadata.json
 │   └── contents/
@@ -281,13 +284,7 @@ bakalari-widget/
 │           ├── main.qml
 │           ├── configGeneral.qml
 │           ├── configTeachers.qml
-│           └── BakalariWallet/
-│               └── qmldir
-├── wallet/
-│   ├── qmldir
-│   ├── walletbackend.cpp
-│   ├── walletbackend.h
-│   └── walletplugin.cpp
+│           └── WalletDbus.qml
 ├── tools/
 │   ├── parse_timetable.py
 │   └── test_api.py

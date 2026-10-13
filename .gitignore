@@ -57,19 +57,7 @@ Thumbs.db
 
 # Generated Plasma packages, if you later create them
 *.plasmoid
-# =========================
-# CMake / compiled plugins
-# =========================
-
-**/build/
-**/CMakeFiles/
-**/CMakeCache.txt
-**/cmake_install.cmake
-**/Makefile
-
-# Compiled QML/KWallet plugin
-**/package/contents/ui/BakalariWallet/*.so
-
-# Generic compiled binaries
+# Keep obsolete compiled artifacts from older checkouts out of Git.
+**/*.so
 **/*.o
 **/*.obj
