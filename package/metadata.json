@@ -3,11 +3,14 @@
         "Id": "cz.saruman.bakalari",
         "Name": "Bakaláři Schedule",
         "Description": "Displays your Bakaláři weekly timetable",
-        "Version": "0.1.0",
-        "License": "GPL-3.0",
+        "Version": "1.0",
+        "License": "MIT",
         "Authors": [
             {
-                "Name": "SAruman"
+                "Name": "Matěj Stebel"
+            },
+            {
+                "Name": "Matěj Adamec"
             }
         ]
     },

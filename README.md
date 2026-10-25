@@ -9,13 +9,13 @@ Bakaláři přímo na ploše.
 Nejjednodušší instalace přímo z GitHubu:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/kralicekgamer/bakalari-widget/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/MatejStebel/bakalari-widget/main/install.sh | bash
 ```
 
 
 ## Odinstalace
 ```bash
-curl -fsSL https://raw.githubusercontent.com/kralicekgamer/bakalari-widget/main/uninstall.sh | bash
+curl -fsSL https://raw.githubusercontent.com/MatejStebel/bakalari-widget/main/uninstall.sh | bash
 ```
 
 Odinstalace odstraní pouze widget. Heslo v KWallet a Plasma nastavení zůstanou
