@@ -1,63 +1,18 @@
-# =========================
-# Private / account data
-# =========================
-
-**/timetable.json
-**/parsed_timetable.json
-**/parsed_timetable.js
-**/teacher_config.json
+# Local credentials and timetable exports
 **/credentials.json
 **/*.token
+**/timetable.json
+**/parsed_timetable.json
+**/teacher_config.json
 
-# Generated timetable files copied into Plasma packages
-**/package/contents/data/timetable.json
-**/package/contents/data/timetable.js
-/home/saruman/plasma-widgets/bakalari-widget/package/contents/data/timetable.js
-
-
-# =========================
-# Python
-# =========================
-
-**/__pycache__/
-**/*.pyc
-**/*.pyo
-
-# Virtual environments
-**/.venv/
-**/venv/
-
-
-# =========================
-# Editors / IDEs
-# =========================
-
+# Local build and editor files
+**/build/
+**/dist/
 **/.vscode/
 **/.idea/
-
+**/__pycache__/
+**/*.pyc
+*.plasmoid
 *.swp
 *.swo
 *~
-
-
-# =========================
-# OS junk
-# =========================
-
-.DS_Store
-Thumbs.db
-
-
-# =========================
-# Build/package output
-# =========================
-
-**/build/
-**/dist/
-
-# Generated Plasma packages, if you later create them
-*.plasmoid
-# Keep obsolete compiled artifacts from older checkouts out of Git.
-**/*.so
-**/*.o
-**/*.obj

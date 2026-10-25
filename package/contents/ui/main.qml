@@ -1,9 +1,11 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import org.kde.kirigami as Kirigami
 import org.kde.plasma.plasmoid
 import org.kde.plasma.components as PlasmaComponents
 import "../code/timetableParser.js" as TimetableParser
+import "../code/themeParser.js" as ThemeParser
 
 
 PlasmoidItem {
@@ -26,8 +28,25 @@ PlasmoidItem {
     property var lastApiData: null
     property string teacherOverridesJson:
         plasmoid.configuration.teacherOverrides || "{}"
+    property string themeJson:
+        plasmoid.configuration.themeJson || ""
+    property var themeData: ThemeParser.parseTheme(
+        root.themeJson
+    ).theme
     property bool logoutRequested:
         plasmoid.configuration.logoutRequested
+    property bool loginRequested:
+        plasmoid.configuration.loginRequested
+
+    function themeColor(name) {
+        var value = root.themeData[name] || "000000"
+        return "#" + value
+    }
+
+    function themeNumber(name, fallback) {
+        var value = Number(root.themeData[name])
+        return isFinite(value) && value >= 0 ? value : fallback
+    }
 
     onLogoutRequestedChanged: {
         if (!root.logoutRequested) {
@@ -38,6 +57,14 @@ PlasmoidItem {
 
         // Reset the one-shot request.
         plasmoid.configuration.logoutRequested = false
+    }
+
+    onLoginRequestedChanged: {
+        if (!root.loginRequested) {
+            return
+        }
+        plasmoid.configuration.loginRequested = false
+        root.tryAutomaticLogin()
     }
 
     onTeacherOverridesJsonChanged: {
@@ -208,8 +235,19 @@ PlasmoidItem {
         function onRefreshIntervalChanged() {
             refreshTimer.restart()
         }
-        function onServerUrlChanged() { root.clearLoginSession() }
-        function onUsernameChanged() { root.clearLoginSession() }
+        function onServerUrlChanged() {
+            root.clearLoginSession()
+            root.tryAutomaticLogin()
+        }
+        function onUsernameChanged() {
+            root.clearLoginSession()
+            root.tryAutomaticLogin()
+        }
+        function onThemeJsonChanged() {
+            root.themeData = ThemeParser.parseTheme(
+                plasmoid.configuration.themeJson
+            ).theme
+        }
     }
 
 
@@ -621,11 +659,18 @@ PlasmoidItem {
 
         Layout.minimumWidth: 360
 
-        property int dayWidth: 90
-        property int lessonWidth: 110
-        property int headerHeight: 55
-        property int lessonHeight: 90
-        property int cellSpacing: 5
+        property int dayWidth: Math.max(58, Math.min(90, width * 0.12))
+        property int lessonWidth: Math.max(76, Math.min(120, width * 0.13))
+        property int headerHeight: Math.max(42, themeNumber("spSecondaryText", 12) * 3.5)
+        property int lessonHeight: Math.max(68, Math.min(110, height * 0.16))
+        property int cellSpacing: Math.max(2, themeNumber("dpTextPadding", 2))
+        property bool compact: width < 520
+        property color accentColor: root.themeColor("cHighlight")
+        property color surfaceColor: root.themeColor("cHeaderBg")
+        property color alternateSurfaceColor: root.themeColor("cABg")
+        property color secondaryTextColor: root.themeColor("cASecondaryText")
+
+        property color accentSurface: root.themeColor("cHBg")
 
 
         Flickable {
@@ -698,55 +743,11 @@ PlasmoidItem {
                         verticalAlignment:
                             Text.AlignVCenter
 
+                        color:
+                            representation.accentColor
+
                         font.pixelSize: 20
-                        font.bold: true
-                    }
-                    RowLayout {
-                        Layout.fillWidth: true
-                        Layout.minimumWidth: 320
-
-                        visible:
-                            root.accessToken === ""
-
-                        spacing: 8
-
-                        TextField {
-                            id: passwordField
-
-                            Layout.fillWidth: true
-                            Layout.minimumWidth: 220
-
-                            text:
-                                root.sessionPassword
-
-                            placeholderText:
-                                i18n("Bakaláři password")
-
-                            echoMode:
-                                TextInput.Password
-
-                            enabled:
-                                !root.apiBusy
-
-                            onTextEdited:
-                                root.sessionPassword = text
-
-                            onAccepted:
-                                root.loginToBakalari()
-                        }
-
-                        Button {
-                            text:
-                                root.apiBusy
-                                ? i18n("Loading...")
-                                : i18n("Login")
-
-                            enabled:
-                                !root.apiBusy
-
-                            onClicked:
-                                root.loginToBakalari()
-                        }
+                        font.weight: Font.DemiBold
                     }
                     RowLayout {
                         Layout.fillWidth: true
@@ -799,11 +800,10 @@ PlasmoidItem {
                         Layout.fillWidth: true
 
                         visible:
-                            root.days.length === 0
-                            && root.accessToken === ""
+                            root.accessToken === ""
 
                         text:
-                            i18n("Enter your password to load the timetable")
+                            i18n("You are not logged in. Open widget settings to add your password.")
 
                         horizontalAlignment:
                             Text.AlignHCenter
@@ -819,6 +819,8 @@ PlasmoidItem {
 
                         Layout.preferredHeight:
                             representation.headerHeight
+
+                        visible: root.accessToken !== ""
 
                         spacing:
                             representation.cellSpacing
@@ -844,7 +846,8 @@ PlasmoidItem {
                                 Text.AlignVCenter
 
                             font.bold: true
-                            font.pixelSize: 18
+                            font.pixelSize: themeNumber("spSecondaryText", 12)
+                            color: root.themeColor("cHeaderSecondaryText")
                         }
 
 
@@ -869,13 +872,14 @@ PlasmoidItem {
 
                                 color:
                                     root.isCurrentHour(modelData)
-                                    ? Qt.rgba(
-                                        0.7,
-                                        0.7,
-                                        0.7,
-                                        0.25
-                                    )
-                                    : "transparent"
+                                            ? representation.accentSurface
+                                            : representation.alternateSurfaceColor
+
+                                        border.width: 1
+                                        border.color:
+                                            root.isCurrentHour(modelData)
+                                            ? representation.accentColor
+                                            : "transparent"
 
                                 ColumnLayout {
                                     anchors.fill: parent
@@ -898,7 +902,8 @@ PlasmoidItem {
                                             Text.AlignVCenter
 
                                         font.bold: true
-                                        font.pixelSize: 16
+                                        font.pixelSize: themeNumber("spPrimaryText", 18)
+                                        color: root.themeColor("cHeaderPrimaryText")
                                     }
 
 
@@ -916,8 +921,9 @@ PlasmoidItem {
                                         verticalAlignment:
                                             Text.AlignVCenter
 
-                                        font.pixelSize: 11
-                                        opacity: 0.7
+                                        font.pixelSize: themeNumber("spSecondaryText", 12)
+                                        color:
+                                            representation.secondaryTextColor
                                     }
                                 }
                             }
@@ -930,6 +936,7 @@ PlasmoidItem {
 
                     Repeater {
                         model: root.days
+                        visible: root.accessToken !== ""
 
                         delegate: RowLayout {
                             id: dayRow
@@ -965,13 +972,13 @@ PlasmoidItem {
 
                                 color:
                                     root.isToday(dayRow.dayData)
-                                    ? Qt.rgba(
-                                        0.7,
-                                        0.7,
-                                        0.7,
-                                        0.25
-                                    )
-                                    : "transparent"
+                                    ? representation.accentSurface
+                                    : representation.alternateSurfaceColor
+
+                                border.width:
+                                    root.isToday(dayRow.dayData) ? 1 : 0
+                                border.color:
+                                    representation.accentColor
 
                                 PlasmaComponents.Label {
                                     anchors.fill: parent
@@ -988,6 +995,7 @@ PlasmoidItem {
                                         Text.AlignVCenter
 
                                     font.bold: true
+                                    color: root.themeColor("cHPrimaryText")
                                 }
                             }
 
@@ -1003,21 +1011,11 @@ PlasmoidItem {
 
                                 radius: 6
 
-                                color: Qt.rgba(
-                                    0.5,
-                                    0.5,
-                                    0.5,
-                                    0.15
-                                )
+                                color: root.themeColor("cABg")
 
                                 border.width: 1
 
-                                border.color: Qt.rgba(
-                                    0.5,
-                                    0.5,
-                                    0.5,
-                                    0.3
-                                )
+                                border.color: root.themeColor("cDivider")
 
                                 PlasmaComponents.Label {
                                     anchors.fill: parent
@@ -1036,6 +1034,7 @@ PlasmoidItem {
                                     Text.WordWrap
 
                                     font.bold: true
+                                    color: root.themeColor("cAPrimaryText")
                                 }
                             }
 
@@ -1072,45 +1071,27 @@ PlasmoidItem {
 
                                     color: {
                                         if (!lesson) {
-                                            return "transparent"
+                                            return root.themeColor("cEmptyBg")
                                         }
 
                                         if (lesson.status === "cancelled") {
-                                            return Qt.rgba(
-                                                0.2,
-                                                0.8,
-                                                0.2,
-                                                0.25
-                                            )
+                                            return root.themeColor("cError")
                                         }
 
                                         if (lesson.status === "changed") {
-                                            return Qt.rgba(
-                                                1.0,
-                                                0.65,
-                                                0.0,
-                                                0.25
-                                            )
+                                            return root.themeColor("cChngBg")
                                         }
 
-                                        return Qt.rgba(
-                                            0.5,
-                                            0.5,
-                                            0.5,
-                                            0.15
-                                        )
+                                        return root.themeColor("cABg")
                                     }
 
                                     border.width:
                                         lesson ? 1 : 0
 
                                     border.color:
-                                        Qt.rgba(
-                                            0.5,
-                                            0.5,
-                                            0.5,
-                                            0.3
-                                        )
+                                        lesson
+                                        ? root.themeColor("cDivider")
+                                        : root.themeColor("cEmptyBg")
 
 
                                     ColumnLayout {
@@ -1138,7 +1119,10 @@ PlasmoidItem {
                                                 Text.AlignHCenter
 
                                             font.bold: true
-                                            font.pixelSize: 15
+                                            font.pixelSize: themeNumber("spPrimaryText", 18)
+                                            color: lesson && lesson.status === "changed"
+                                                ? root.themeColor("cChngPrimaryText")
+                                                : root.themeColor("cAPrimaryText")
                                         }
 
 
@@ -1156,7 +1140,10 @@ PlasmoidItem {
                                             horizontalAlignment:
                                                 Text.AlignHCenter
 
-                                            font.pixelSize: 12
+                                            font.pixelSize: themeNumber("spSecondaryText", 12)
+                                            color: lesson && lesson.status === "changed"
+                                                ? root.themeColor("cChngSecondaryText")
+                                                : root.themeColor("cASecondaryText")
                                         }
 
 
@@ -1174,8 +1161,8 @@ PlasmoidItem {
                                             horizontalAlignment:
                                                 Text.AlignHCenter
 
-                                            font.pixelSize: 11
-                                            opacity: 0.7
+                                            font.pixelSize: themeNumber("spSecondaryText", 12)
+                                            color: root.themeColor("cARoomText")
                                         }
                                         PlasmaComponents.Label {
                                             Layout.fillWidth: true
@@ -1183,6 +1170,7 @@ PlasmoidItem {
                                             visible:
                                                 lesson !== null
                                                 && lesson.change !== null
+                                                && !representation.compact
                                                 && lesson.change.description !== undefined
                                                 && lesson.change.description !== ""
 
@@ -1200,8 +1188,8 @@ PlasmoidItem {
                                             maximumLineCount: 2
                                             elide: Text.ElideRight
 
-                                            font.pixelSize: 10
-                                            opacity: 0.8
+                                            font.pixelSize: themeNumber("spInfolineTextSize", 12)
+                                            color: root.themeColor("cInfolineText")
                                         }
                                     }
                                 }

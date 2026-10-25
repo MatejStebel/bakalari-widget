@@ -6,9 +6,12 @@ import re
 import unittest
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-from PySide6.QtCore import QUrl
-from PySide6.QtGui import QGuiApplication
-from PySide6.QtQml import QJSEngine, QQmlComponent, QQmlEngine
+try:
+    from PySide6.QtCore import QUrl
+    from PySide6.QtGui import QGuiApplication
+    from PySide6.QtQml import QJSEngine, QQmlComponent, QQmlEngine
+except ModuleNotFoundError as error:
+    raise unittest.SkipTest("PySide6 is required for QML lifecycle tests") from error
 
 UI = Path(__file__).resolve().parents[1] / "package/contents/ui"
 APP = QGuiApplication([])
@@ -114,7 +117,7 @@ class LoginLifecycle(unittest.TestCase):
 
     def test_qml_compiles(self):
         engine = QQmlEngine()
-        for name in ["main.qml", "configGeneral.qml", "WalletDbus.qml"]:
+        for name in ["main.qml", "configSchedule.qml", "WalletDbus.qml"]:
             component = QQmlComponent(engine, QUrl.fromLocalFile(str(UI / name)))
             while component.isLoading():
                 APP.processEvents()

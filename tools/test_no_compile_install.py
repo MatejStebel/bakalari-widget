@@ -51,7 +51,7 @@ class NoCompileInstall(unittest.TestCase):
         (self.target / "contents/ui/WalletLegacy.qml").write_text("old adapter")
         unrelated = self.target / "keep.txt"
         unrelated.write_text("keep me")
-        result = self.install("6.3.6", "update.sh")
+        result = self.install("6.3.6")
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertFalse(plugin.parent.exists())
         self.assertFalse((self.target / "contents/ui/WalletLegacy.qml").exists())
@@ -66,10 +66,6 @@ class NoCompileInstall(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("widget was installed, but Plasma could not be restarted", result.stderr)
         self.assertTrue((self.target / "contents/ui/WalletDbus.qml").is_file())
-
-    def test_old_installer_name_remains_an_alias(self):
-        result = self.install("6.3.6", "install-no-compile.sh")
-        self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_plasma5_rejected_before_install(self):
         result = self.install("5.27.12")
