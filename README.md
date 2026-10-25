@@ -10,23 +10,10 @@ Nejjednodušší instalace přímo z GitHubu:
 curl -fsSL https://raw.githubusercontent.com/kralicekgamer/bakalari-widget/main/install.sh | bash
 ```
 
-Nebo z naklonovaného repozitáře:
-
-```bash
-git clone https://github.com/kralicekgamer/bakalari-widget.git
-cd bakalari-widget
-./install.sh
-```
-
-Instalátor widget zkopíruje do uživatelského Plasma adresáře a restartuje
-Plasma Shell. Není potřeba `sudo`.
 
 ## Odinstalace
-
-Z klonovaného repozitáře spusť:
-
 ```bash
-./uninstall.sh
+curl -fsSL https://raw.githubusercontent.com/kralicekgamer/bakalari-widget/main/uninstall.sh | bash
 ```
 
 Odinstalace odstraní pouze widget. Heslo v KWallet a Plasma nastavení zůstanou
