@@ -150,13 +150,25 @@ KCM.SimpleKCM {
             Layout.fillWidth: true
         }
 
-        QQC2.TextArea {
-            id: themeInput
+        QQC2.ScrollView {
+            id: themeScroll
             Layout.fillWidth: true
+            Layout.minimumHeight: 220
             Layout.preferredHeight: 260
-            wrapMode: TextEdit.NoWrap
-            font.family: "monospace"
-            onTextChanged: validateTheme()
+            Layout.maximumHeight: 260
+            implicitHeight: 260
+            height: 260
+            clip: true
+            QQC2.ScrollBar.vertical.policy: QQC2.ScrollBar.AsNeeded
+
+            QQC2.TextArea {
+                id: themeInput
+                width: themeScroll.width
+                height: Math.max(themeScroll.height, contentHeight)
+                wrapMode: TextEdit.NoWrap
+                font.family: "monospace"
+                onTextChanged: validateTheme()
+            }
         }
 
         RowLayout {
