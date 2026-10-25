@@ -2,9 +2,10 @@ import QtQuick
 import QtQuick.Controls as QQC2
 import QtQuick.Layouts
 import org.kde.kirigami as Kirigami
+import org.kde.kcmutils as KCM
 import "../code/themeParser.js" as ThemeParser
 
-Kirigami.FormLayout {
+KCM.SimpleKCM {
     id: page
 
     property alias cfg_serverUrl: serverUrl.text
@@ -12,6 +13,10 @@ Kirigami.FormLayout {
     property alias cfg_displayName: displayName.text
     property alias cfg_refreshInterval: refreshInterval.value
     property alias cfg_themeJson: themeInput.text
+    property bool cfg_logoutRequested: false
+    property bool cfg_loginRequested: false
+    property string cfg_teacherList: "[]"
+    property string cfg_teacherOverrides: "{}"
     property string themeError: ""
     property string walletMessage: ""
 
@@ -58,45 +63,48 @@ Kirigami.FormLayout {
 
     Loader {
         id: walletLoader
-        source: "../ui/WalletDbus.qml"
+        source: "WalletDbus.qml"
     }
 
-    QQC2.Label {
+    Kirigami.FormLayout {
+        width: parent.width
+
+        QQC2.Label {
             Kirigami.FormData.label: i18n("Account")
             text: i18n("Credentials are stored securely in KWallet.")
             wrapMode: Text.WordWrap
             Layout.fillWidth: true
-    }
+        }
 
-    QQC2.TextField {
+        QQC2.TextField {
             id: serverUrl
             Kirigami.FormData.label: i18n("Bakaláři server")
             placeholderText: "https://school.bakalari.cz"
             Layout.fillWidth: true
-    }
+        }
 
-    QQC2.TextField {
+        QQC2.TextField {
             id: username
             Kirigami.FormData.label: i18n("Username")
             Layout.fillWidth: true
-    }
+        }
 
-    QQC2.TextField {
+        QQC2.TextField {
             id: passwordInput
             Kirigami.FormData.label: i18n("Password")
             echoMode: TextInput.Password
             onAccepted: page.savePassword()
             Layout.fillWidth: true
-    }
+        }
 
-    QQC2.Button {
+        QQC2.Button {
             Kirigami.FormData.label: i18n("Account")
             text: i18n("Save password")
             icon.name: "document-save"
             onClicked: page.savePassword()
-    }
+        }
 
-    QQC2.Button {
+        QQC2.Button {
             Kirigami.FormData.label: i18n("Account")
             text: i18n("Forget password and log out")
             icon.name: "system-log-out"
@@ -105,24 +113,24 @@ Kirigami.FormLayout {
                 plasmoid.configuration.logoutRequested = true
                 walletMessage = i18n("Logged out.")
             }
-    }
+        }
 
-    QQC2.Label {
+        QQC2.Label {
             visible: walletMessage !== ""
             Kirigami.FormData.label: i18n("Account")
             text: walletMessage
             wrapMode: Text.WordWrap
             Layout.fillWidth: true
-    }
+        }
 
-    QQC2.TextField {
+        QQC2.TextField {
             id: displayName
             Kirigami.FormData.label: i18n("Display name")
             placeholderText: i18n("Optional name shown above the timetable")
             Layout.fillWidth: true
-    }
+        }
 
-    QQC2.SpinBox {
+        QQC2.SpinBox {
             id: refreshInterval
             Kirigami.FormData.label: i18n("Refresh interval")
             from: 1
@@ -133,25 +141,25 @@ Kirigami.FormLayout {
                 var result = parseInt(text)
                 return isNaN(result) ? 15 : result
             }
-    }
+        }
 
-    QQC2.Label {
+        QQC2.Label {
             Kirigami.FormData.label: i18n("Theme JSON")
             text: i18n("Paste a theme JSON from lepsi-rozvrh-themes.")
             wrapMode: Text.WordWrap
             Layout.fillWidth: true
-    }
+        }
 
-    QQC2.TextArea {
+        QQC2.TextArea {
             id: themeInput
             Layout.fillWidth: true
             Layout.preferredHeight: 260
             wrapMode: TextEdit.NoWrap
             font.family: "monospace"
             onTextChanged: validateTheme()
-    }
+        }
 
-    RowLayout {
+        RowLayout {
             Kirigami.FormData.label: i18n("Theme")
             Layout.fillWidth: true
 
@@ -164,6 +172,7 @@ Kirigami.FormLayout {
                 color: page.themeError === i18n("Theme JSON is valid.")
                     ? Kirigami.Theme.positiveTextColor
                     : Kirigami.Theme.negativeTextColor
+            }
         }
     }
 }

@@ -659,11 +659,67 @@ PlasmoidItem {
 
         Layout.minimumWidth: 360
 
-        property int dayWidth: Math.max(58, Math.min(90, width * 0.12))
-        property int lessonWidth: Math.max(76, Math.min(120, width * 0.13))
-        property int headerHeight: Math.max(42, themeNumber("spSecondaryText", 12) * 3.5)
-        property int lessonHeight: Math.max(68, Math.min(110, height * 0.16))
-        property int cellSpacing: Math.max(2, themeNumber("dpTextPadding", 2))
+        property int dayWidth: Math.max(
+            42,
+            Math.min(96, availableWidth * 0.12)
+        )
+        property int lessonWidth: Math.max(
+            42,
+            (availableWidth - dayWidth
+                - root.lessonTimes.length * cellSpacing)
+                / Math.max(1, root.lessonTimes.length)
+        )
+        property int headerHeight: Math.max(
+            34,
+            Math.min(64, availableHeight * 0.13)
+        )
+        property int lessonHeight: Math.max(
+            42,
+            (availableHeight - statusHeight - headerHeight
+                - Math.max(0, root.days.length - 1) * cellSpacing)
+                / Math.max(1, root.days.length)
+        )
+        property int statusHeight: root.accessToken !== ""
+            ? secondaryFontSize + outerPadding * 2
+            : secondaryFontSize * 2 + outerPadding * 2
+        property int availableWidth: Math.max(
+            1,
+            width - outerPadding * 2
+        )
+        property int availableHeight: Math.max(
+            1,
+            height - outerPadding * 2
+        )
+        property real uiScale: Math.max(
+            0.75,
+            Math.min(
+                1.35,
+                Math.min(
+                    Math.max(1, width) / 900,
+                    Math.max(1, height) / 500
+                )
+            )
+        )
+        property int outerPadding: Math.max(
+            6,
+            Math.round(themeNumber("dpPaddingLeft", 3) * uiScale + 3)
+        )
+        property int cellSpacing: Math.max(
+            4,
+            Math.round(themeNumber("dpDividerWidth", 1) * 2 + 3 * uiScale)
+        )
+        property int primaryFontSize: Math.max(
+            11,
+            Math.round(themeNumber("spPrimaryText", 18) * uiScale)
+        )
+        property int secondaryFontSize: Math.max(
+            9,
+            Math.round(themeNumber("spSecondaryText", 12) * uiScale)
+        )
+        property int infoFontSize: Math.max(
+            8,
+            Math.round(themeNumber("spInfolineTextSize", 12) * uiScale)
+        )
         property bool compact: width < 520
         property color accentColor: root.themeColor("cHighlight")
         property color surfaceColor: root.themeColor("cHeaderBg")
@@ -673,104 +729,37 @@ PlasmoidItem {
         property color accentSurface: root.themeColor("cHBg")
 
 
-        Flickable {
+        Item {
             id: timetableScroll
 
             anchors.fill: parent
 
-            contentWidth: timetable.width
-            contentHeight: timetable.height
-
             clip: true
-
-            flickableDirection:
-                Flickable.HorizontalAndVerticalFlick
-
-            boundsBehavior:
-                Flickable.StopAtBounds
-
-
-            ScrollBar.horizontal:
-                PlasmaComponents.ScrollBar {
-                    policy: ScrollBar.AsNeeded
-                }
-
-
-            ScrollBar.vertical:
-                PlasmaComponents.ScrollBar {
-                    policy: ScrollBar.AsNeeded
-                }
 
 
             Item {
                 id: timetable
 
                 width: Math.max(
-                    timetableScroll.width,
-
-                    representation.dayWidth
-                    + root.lessonTimes.length
-                    * representation.lessonWidth
-                    + root.lessonTimes.length
-                    * representation.cellSpacing
+                    1,
+                    timetableScroll.width
                 )
 
-                height: Math.max(
-                    timetableScroll.height,
-                    timetableColumn.implicitHeight
-                )
+                height: Math.max(1, timetableScroll.height)
 
                 ColumnLayout {
                     id: timetableColumn
                     anchors.fill: parent
+                    anchors.margins: representation.outerPadding
 
                     spacing:
                         representation.cellSpacing
 
-
-                    PlasmaComponents.Label {
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: 40
-
-                        text:
-                            (plasmoid.configuration.displayName || "").trim() !== ""
-                            ? i18n("Weekly schedule — %1", plasmoid.configuration.displayName.trim())
-                            : i18n("Weekly schedule")
-
-                        horizontalAlignment:
-                            Text.AlignHCenter
-
-                        verticalAlignment:
-                            Text.AlignVCenter
-
-                        color:
-                            representation.accentColor
-
-                        font.pixelSize: 20
-                        font.weight: Font.DemiBold
-                    }
                     RowLayout {
                         Layout.fillWidth: true
 
                         visible:
                             root.accessToken !== ""
-
-                        Item {
-                            Layout.fillWidth: true
-                        }
-
-                        Button {
-                            text:
-                                root.apiBusy
-                                ? i18n("Loading...")
-                                : i18n("Refresh")
-
-                            enabled:
-                                !root.apiBusy
-
-                            onClicked:
-                                root.fetchTimetable()
-                        }
                     }
                     PlasmaComponents.Label {
                         Layout.fillWidth: true
@@ -846,7 +835,7 @@ PlasmoidItem {
                                 Text.AlignVCenter
 
                             font.bold: true
-                            font.pixelSize: themeNumber("spSecondaryText", 12)
+                            font.pixelSize: representation.secondaryFontSize
                             color: root.themeColor("cHeaderSecondaryText")
                         }
 
@@ -884,7 +873,7 @@ PlasmoidItem {
                                 ColumnLayout {
                                     anchors.fill: parent
 
-                                    anchors.margins: 2
+                                    anchors.margins: representation.outerPadding / 2
 
                                     spacing: 0
 
@@ -902,7 +891,7 @@ PlasmoidItem {
                                             Text.AlignVCenter
 
                                         font.bold: true
-                                        font.pixelSize: themeNumber("spPrimaryText", 18)
+                                        font.pixelSize: representation.primaryFontSize
                                         color: root.themeColor("cHeaderPrimaryText")
                                     }
 
@@ -921,7 +910,7 @@ PlasmoidItem {
                                         verticalAlignment:
                                             Text.AlignVCenter
 
-                                        font.pixelSize: themeNumber("spSecondaryText", 12)
+                                        font.pixelSize: representation.secondaryFontSize
                                         color:
                                             representation.secondaryTextColor
                                     }
@@ -995,6 +984,7 @@ PlasmoidItem {
                                         Text.AlignVCenter
 
                                     font.bold: true
+                                    font.pixelSize: representation.secondaryFontSize
                                     color: root.themeColor("cHPrimaryText")
                                 }
                             }
@@ -1019,7 +1009,7 @@ PlasmoidItem {
 
                                 PlasmaComponents.Label {
                                     anchors.fill: parent
-                                    anchors.margins: 8
+                                    anchors.margins: representation.outerPadding
 
                                     text:
                                     dayRow.dayData.eventText || ""
@@ -1034,6 +1024,7 @@ PlasmoidItem {
                                     Text.WordWrap
 
                                     font.bold: true
+                                    font.pixelSize: representation.secondaryFontSize
                                     color: root.themeColor("cAPrimaryText")
                                 }
                             }
@@ -1099,7 +1090,7 @@ PlasmoidItem {
                                             parent
 
                                         width:
-                                            parent.width - 10
+                                            parent.width - representation.outerPadding * 2
 
                                         spacing: 2
 
@@ -1119,10 +1110,11 @@ PlasmoidItem {
                                                 Text.AlignHCenter
 
                                             font.bold: true
-                                            font.pixelSize: themeNumber("spPrimaryText", 18)
+                                            font.pixelSize: representation.primaryFontSize
                                             color: lesson && lesson.status === "changed"
                                                 ? root.themeColor("cChngPrimaryText")
                                                 : root.themeColor("cAPrimaryText")
+                                            elide: Text.ElideRight
                                         }
 
 
@@ -1140,10 +1132,11 @@ PlasmoidItem {
                                             horizontalAlignment:
                                                 Text.AlignHCenter
 
-                                            font.pixelSize: themeNumber("spSecondaryText", 12)
+                                            font.pixelSize: representation.secondaryFontSize
                                             color: lesson && lesson.status === "changed"
                                                 ? root.themeColor("cChngSecondaryText")
                                                 : root.themeColor("cASecondaryText")
+                                            elide: Text.ElideRight
                                         }
 
 
@@ -1161,35 +1154,9 @@ PlasmoidItem {
                                             horizontalAlignment:
                                                 Text.AlignHCenter
 
-                                            font.pixelSize: themeNumber("spSecondaryText", 12)
+                                            font.pixelSize: representation.secondaryFontSize
                                             color: root.themeColor("cARoomText")
-                                        }
-                                        PlasmaComponents.Label {
-                                            Layout.fillWidth: true
-
-                                            visible:
-                                                lesson !== null
-                                                && lesson.change !== null
-                                                && !representation.compact
-                                                && lesson.change.description !== undefined
-                                                && lesson.change.description !== ""
-
-                                            text:
-                                                visible
-                                                ? lesson.change.description
-                                                : ""
-
-                                            horizontalAlignment:
-                                                Text.AlignHCenter
-
-                                            wrapMode:
-                                                Text.WordWrap
-
-                                            maximumLineCount: 2
                                             elide: Text.ElideRight
-
-                                            font.pixelSize: themeNumber("spInfolineTextSize", 12)
-                                            color: root.themeColor("cInfolineText")
                                         }
                                     }
                                 }

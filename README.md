@@ -3,6 +3,8 @@
 Jednoduchý widget pro **KDE Plasma 6**, který zobrazuje rozvrh ze systému
 Bakaláři přímo na ploše.
 
+![Showcase](image.png)
+
 ## Instalace
 Nejjednodušší instalace přímo z GitHubu:
 
