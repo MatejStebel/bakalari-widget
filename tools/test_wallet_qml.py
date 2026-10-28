@@ -9,13 +9,17 @@ import argparse
 import os
 from pathlib import Path
 import sys
+import unittest
 import uuid
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from PySide6.QtCore import QTimer, QUrl, qInstallMessageHandler
-from PySide6.QtGui import QGuiApplication
-from PySide6.QtQml import QQmlComponent, QQmlEngine
+try:
+    from PySide6.QtCore import QTimer, QUrl, qInstallMessageHandler
+    from PySide6.QtGui import QGuiApplication
+    from PySide6.QtQml import QQmlComponent, QQmlEngine
+except ModuleNotFoundError as error:
+    raise unittest.SkipTest("PySide6 is required for QML wallet tests") from error
 
 parser = argparse.ArgumentParser(description=__doc__)
 parser.add_argument("--live", action="store_true", help="write/read/delete a disposable wallet entry")

@@ -1,6 +1,24 @@
 #!/usr/bin/env bash
 set -euo pipefail
-cd "$(dirname "$0")"
+
+repo_archive="${BAKALARI_WIDGET_ARCHIVE:-https://github.com/kralicekgamer/bakalari-widget/archive/refs/heads/main.tar.gz}"
+script_dir=""
+if [[ -f ${BASH_SOURCE[0]:-} ]]; then
+    script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+fi
+
+source_dir=""
+download_dir=""
+if [[ -n $script_dir && -d "$script_dir/package" ]]; then
+    source_dir="$script_dir/package"
+else
+    download_dir=$(mktemp -d)
+    trap 'rm -rf "$download_dir"' EXIT
+    echo "Downloading the latest widget..."
+    curl --fail --location --silent --show-error "$repo_archive" \
+        | tar -xz -C "$download_dir" --strip-components=1
+    source_dir="$download_dir/package"
+fi
 
 destination="${XDG_DATA_HOME:-$HOME/.local/share}/plasma/plasmoids/cz.saruman.bakalari"
 if [[ $# -eq 2 && $1 == --destination && -n $2 ]]; then
@@ -48,9 +66,8 @@ if [[ $module_found == false ]]; then
 fi
 
 # Merge package code/configuration without touching account settings or wallet data.
-# Exclude generated/private data and compiled artifacts from the source checkout.
 mkdir -p "$destination"
-tar -C package --exclude='*.so' --exclude='*.so.*' --exclude='__pycache__' \
+tar -C "$source_dir" --exclude='*.so' --exclude='*.so.*' --exclude='__pycache__' \
     -cf - metadata.json contents/ui contents/code contents/config \
     | tar -C "$destination" -xf -
 
