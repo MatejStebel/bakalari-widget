@@ -680,7 +680,9 @@ PlasmoidItem {
                 / Math.max(1, root.days.length)
         )
         property int statusHeight: root.accessToken !== ""
-            ? secondaryFontSize + outerPadding * 2
+            ? (root.credentialStatus !== ""
+                ? secondaryFontSize + outerPadding * 2
+                : 0)
             : secondaryFontSize * 2 + outerPadding * 2
         property int availableWidth: Math.max(
             1,
@@ -774,7 +776,7 @@ PlasmoidItem {
                         Layout.fillWidth: true
 
                         visible:
-                            root.apiStatus !== ""
+                            root.apiStatus !== "" && root.accessToken === ""
 
                         text:
                             root.apiStatus
